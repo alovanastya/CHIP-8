@@ -1,0 +1,77 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E89AE9E7-6E78-42A0-A312-746C7ED09886}|Chip8.vcxproj|C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\Computer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{E89AE9E7-6E78-42A0-A312-746C7ED09886}|Chip8.vcxproj|solutionrelative:Computer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E89AE9E7-6E78-42A0-A312-746C7ED09886}|Chip8.vcxproj|C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{E89AE9E7-6E78-42A0-A312-746C7ED09886}|Chip8.vcxproj|solutionrelative:main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 6,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{6324226f-61b6-4f28-92ee-18d4b5fe1e48}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:13:0:{dcc4ea97-1c0c-482b-b205-e541c0df9728}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:14:0:{dcc4ea97-1c0c-482b-b205-e541c0df9728}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:15:0:{dcc4ea97-1c0c-482b-b205-e541c0df9728}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{e8b06f52-6d01-11d2-aa7d-00c04f990343}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Computer.h",
+              "DocumentMoniker": "C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\Computer.h",
+              "RelativeDocumentMoniker": "Computer.h",
+              "ToolTip": "C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\Computer.h",
+              "RelativeToolTip": "Computer.h",
+              "ViewState": "AQIAAAwAAAAAAAAAAAAAAB0AAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2024-08-05T16:22:52.462Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "main.cpp",
+              "DocumentMoniker": "C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\main.cpp",
+              "RelativeDocumentMoniker": "main.cpp",
+              "ToolTip": "C:\\Users\\a.kuprin\\source\\repos\\chip8\\Chip8\\main.cpp",
+              "RelativeToolTip": "main.cpp",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-08-05T16:22:24.125Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
