@@ -9,64 +9,22 @@ class Computer
 {
 public:
 
-	Computer(const std::string& dump_path) : m_program_counter(512)
-	{
-		std::ifstream file(dump_path, std::ios::binary);
+	Computer(const std::string& dump_path);
 
-		if (file.is_open())
-		{
-			int i = 512;
+	uint8_t firstDigit(const uint16_t* command) const;
 
-			while (!file.eof())
-			{
-				file >> m_memory[i];
-				i++;
-
-				if (i >= 4096)
-				{
-					break;
-				}
-			}
-
-			file.close();
-		}
-	}
-
-	void step()
-	{
-		const uint16_t* command = reinterpret_cast<uint16_t*>(&m_memory[m_program_counter]);
-
-		m_program_counter += 2;
-
-		switch (*command)
-		{
-		case 0x00E0:
-			blankScreen();
-			break;
-
-		case 0x00EE:
-			returnFromFunction();
-			break;
-
-		default:
-			break;
-		}
-	}
+	void step();
 
 private:
-	void blankScreen()
-	{
-		for (int i = 0; i < 1984; i++)
-		{
-			m_screen[i] = 0;
-		}
-	}
+	void blankScreen();
 
-	void returnFromFunction()
-	{
-		m_program_counter = m_stack[m_stack_pointer - 1];
-		--m_stack_pointer;
-	}
+	void returnFromFunction();
+
+	void goToSomeAddress(const uint16_t* command);
+
+	void goToFunction(const uint16_t* command);
+
+	void skipNextCommand(const uint16_t* command);
 
 	// TODO: реализовать команды
 	// 0x1nnn - перескочить по адресу nnn
@@ -76,7 +34,7 @@ private:
 	// Справка: как понять, что в старшем разряде шестнадцатеричной записи стоит 1, 2 или 3?
 	// для двоичной системы счисления количество уникальных чисел, 
 	// которые можно закодировать с помощью x разрядов равно 2^x
-	
+
 	// для шестнадцатеричной системы счисления количество уникальных чисел,
 	// которые можно закодировать с помощью x разрядов равно 16^x
 
