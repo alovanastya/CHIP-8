@@ -28,7 +28,6 @@ uint8_t Computer::firstDigit(const uint16_t* command) const
 	return ((*command) >> 12);
 }
 
-
 void Computer::step()
 {
 	const uint16_t* command = reinterpret_cast<uint16_t*>(&m_memory[m_program_counter]);
@@ -40,25 +39,25 @@ void Computer::step()
 	case 0:
 		if ((*command) == 0x00E0)
 		{
-			blankScreen();
+			CLS();
 		}
 
 		else if ((*command) == 0x00EE)
 		{
-			returnFromFunction();
+			RET();
 		}
 		break;
 
 	case 1:
-		goToSomeAddress(command);
+		JP(command);
 		break;
 
 	case 2:
-		goToFunction(command);
+		CALL(command);
 		break;
 
 	case 3:
-		skipNextCommand(command);
+		SE(command);
 		break;
 
 	default:
@@ -66,7 +65,7 @@ void Computer::step()
 	}
 }
 
-void Computer::blankScreen()
+void Computer::CLS()
 {
 	for (int i = 0; i < 1984; i++)
 	{
@@ -74,34 +73,47 @@ void Computer::blankScreen()
 	}
 }
 
-void Computer::returnFromFunction()
+void Computer::RET()
 {
 	m_program_counter = m_stack[m_stack_pointer - 1];
 	--m_stack_pointer;
 }
 
-void Computer::goToSomeAddress(const uint16_t* command)
+void Computer::JP(const uint16_t* command)
 {
-	m_program_counter = ((*command) ^ (((*command) >> 12) << 12));
+	// 0x1nnn
+	// 1		n		n		n
+	// 0001		....	....	....
+
+	m_program_counter = (*command) & 0x0FFF;
 }
 
-void Computer::goToFunction(const uint16_t* command)
+void Computer::CALL(const uint16_t* command)
 {
-	m_program_counter += 2;
+	// 0x2nnn
+	// 2		n		n		n
+	// 0010		....	....	....
+
 	m_stack[m_stack_pointer] = m_program_counter;
 	m_stack_pointer++;
-	m_program_counter = ((*command) ^ (((*command) >> 12) << 12));
+	m_program_counter = (*command) & 0x00FF;
 }
 
-void Computer::skipNextCommand(const uint16_t* command)
+void Computer::SE(const uint16_t* command)
 {
+	// 0x3xkk
+	// 3		x		k		k
+	// 0011		....	....	....
 
-	uint8_t x = (((*command) ^ (((*command) >> 12) << 12)) >> 8);
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
 
-	uint8_t kk = (((*command) ^ (((*command) >> 12) << 12)) ^ ((((*command) ^ (((*command) >> 12) << 12)) >> 8) << 8));
+	const uint8_t kk = (*command) & 0x00FF;
 
 	if (m_registers[x] == kk)
 	{
 		m_program_counter += 2;
 	}
 }
+
+

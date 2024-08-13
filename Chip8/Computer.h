@@ -11,42 +11,38 @@ public:
 
 	Computer(const std::string& dump_path);
 
-	uint8_t firstDigit(const uint16_t* command) const;
-
 	void step();
 
 private:
-	void blankScreen();
+	uint8_t firstDigit(const uint16_t* command) const;
 
-	void returnFromFunction();
+	void CLS();
 
-	void goToSomeAddress(const uint16_t* command);
+	void RET();
 
-	void goToFunction(const uint16_t* command);
+	void JP(const uint16_t* command);
 
-	void skipNextCommand(const uint16_t* command);
+	void CALL(const uint16_t* command);
+
+	void SE(const uint16_t* command);
 
 	// TODO: реализовать команды
-	// 0x1nnn - перескочить по адресу nnn
-	// 0x2nnn - перейти в подпрограмму по адресу nnn
-	// 0x3xkk - пропустить следующую команду, если регистр с номером x равен kk
+	// 4xkk - SNE Vx, byte		Skip next instruction if Vx != kk.
+	// 5xy0 - SE Vx, Vy			Skip next instruction if Vx = Vy.
+	// 6xkk - LD Vx, byte		Set Vx = kk.
+	// 7xkk - ADD Vx, byte		Set Vx = Vx + kk.
+	// 8xy0 - LD Vx, Vy			Set Vx = Vy
+	// 8xy1 - OR Vx, Vy			Set Vx = Vx OR Vy.
+	// 8xy2 - AND Vx, Vy		Set Vx = Vx AND Vy.
+	// 8xy3 - XOR Vx, Vy		Set Vx = Vx XOR Vy.
+	// 8xy6 - SHR Vx{ , Vy }	Set Vx = Vx SHR 1.
+	// 8xyE - SHL Vx{ , Vy }	Set Vx = Vx SHL 1.
 
-	// Справка: как понять, что в старшем разряде шестнадцатеричной записи стоит 1, 2 или 3?
-	// для двоичной системы счисления количество уникальных чисел, 
-	// которые можно закодировать с помощью x разрядов равно 2^x
+	// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = carry.
+	// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = NOT borrow.
+	// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = NOT borrow.
 
-	// для шестнадцатеричной системы счисления количество уникальных чисел,
-	// которые можно закодировать с помощью x разрядов равно 16^x
 
-	// пусть есть шестнадцатеричного число из 4 разрядов
-	// xyzw
-	// сколько уникальных чисел оно может закодировать? 65536 числел
-	// в двоичной системе счисления нам бы потребовалось 16 разрядов
-	// получается, что один разряд шестнадцатеричного числа в 4 раза "сильнее" одного разряда двоичного числа 
-	// тогда один разряд шестнадцатеричного числа соответствует 4 разрядам двоичного и можно
-	// сопоставить запись числа в шестнадцатеричной и двоичной записи следующим образом
-	//	x		y		z		w
-	//	0101	0101	0101	0101
 
 private:
 	uint16_t m_program_counter;
