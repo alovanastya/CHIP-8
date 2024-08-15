@@ -23,13 +23,17 @@ private:
 
 	void CALL(const uint16_t* command);
 
-	void SE(const uint16_t* command);
+	void SE_1(const uint16_t* command);
+
+	void SE_2(const uint16_t* command);
 
 	void SNE(const uint16_t* command);
 
-	void LD(const uint16_t* command);
+	void LD_1(const uint16_t* command);
 
-	void ADD(const uint16_t* command);
+	void LD_2(const uint16_t* command);
+
+	void ADD_1(const uint16_t* command);
 
 	void OR(const uint16_t* command);
 
@@ -41,24 +45,10 @@ private:
 
 	void SHL(const uint16_t* command);
 
-
-	// TODO: реализовать команды
-	// 4xkk - SNE Vx, byte		Skip next instruction if Vx != kk.
-	// 5xy0 - SE Vx, Vy			Skip next instruction if Vx = Vy.
-	// 6xkk - LD Vx, byte		Set Vx = kk.
-	// 7xkk - ADD Vx, byte		Set Vx = Vx + kk.
-	// 8xy0 - LD Vx, Vy			Set Vx = Vy
-	// 8xy1 - OR Vx, Vy			Set Vx = Vx OR Vy.
-	// 8xy2 - AND Vx, Vy		Set Vx = Vx AND Vy.
-	// 8xy3 - XOR Vx, Vy		Set Vx = Vx XOR Vy.
-	// 8xy6 - SHR Vx{ , Vy }	Set Vx = Vx SHR 1.
-	// 8xyE - SHL Vx{ , Vy }	Set Vx = Vx SHL 1.
-
-	// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = carry.
-	// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = NOT borrow.
-	// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = NOT borrow.
-
-
+	// 9xy0 - SNE Vx, Vy Skip next instruction if Vx != Vy.
+	// Annn - LD I, addr Set I = nnn. I это m_index_register
+	// Bnnn - JP V0, addr Jump to location nnn + V0.
+	// Cxkk - RND Vx, byte Set Vx = random byte AND kk.
 
 private:
 	uint16_t m_program_counter;
