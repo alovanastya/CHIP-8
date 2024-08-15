@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <fstream>
 
-// TODO: перенести в .cpp
 
 class Computer
 {
@@ -25,6 +24,23 @@ private:
 	void CALL(const uint16_t* command);
 
 	void SE(const uint16_t* command);
+
+	void SNE(const uint16_t* command);
+
+	void LD(const uint16_t* command);
+
+	void ADD(const uint16_t* command);
+
+	void OR(const uint16_t* command);
+
+	void AND(const uint16_t* command);
+
+	void XOR(const uint16_t* command);
+
+	void SHR(const uint16_t* command);
+
+	void SHL(const uint16_t* command);
+
 
 	// TODO: реализовать команды
 	// 4xkk - SNE Vx, byte		Skip next instruction if Vx != kk.
