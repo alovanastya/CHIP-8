@@ -366,12 +366,12 @@ void Computer::ADD_2(const uint16_t* command)
 
 	if (m_registers[x] + m_registers[y] > 255) 
 	{
-		m_registers[14] = 1;
+		m_registers[15] = 1;
 	}
 
 	else
 	{
-		m_registers[14] = 0;
+		m_registers[15] = 0;
 	}
 }
 
@@ -389,14 +389,14 @@ void Computer::SUB(const uint16_t* command)
 
 	m_registers[x] = (m_registers[x] - m_registers[y]);
 
-	if ((m_registers[x] - m_registers[y]) < 0)
+	if ((int)m_registers[x] - (int)m_registers[y] < 0)
 	{
-		m_registers[14] = 0;
+		m_registers[15] = 0;
 	}
 
 	else
 	{
-		m_registers[14] = 1;
+		m_registers[15] = 1;
 	}
 }
 
@@ -414,14 +414,14 @@ void Computer::SUBN(const uint16_t* command)
 
 	m_registers[x] = (m_registers[y] - m_registers[x]);
 
-	if ((m_registers[y] - m_registers[x]) < 0)
+	if ((int)m_registers[y] - (int)m_registers[x] < 0)
 	{
-		m_registers[14] = 0;
+		m_registers[15] = 0;
 	}
 
 	else
 	{
-		m_registers[14] = 1;
+		m_registers[15] = 1;
 	}
 }
 
@@ -436,7 +436,7 @@ void Computer::SHR(const uint16_t* command)
 
 	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига
 
-	m_registers[14] = (x & 1);
+	m_registers[15] = m_registers[x] & (uint8_t)1;
 
 	m_registers[x] = m_registers[x] >> 1;
 }
@@ -452,9 +452,9 @@ void Computer::SHL(const uint16_t* command)
 
 	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига 
 
-	m_registers[14] = ((x & 8) >> 3);
+	m_registers[15] = m_registers[x] & (uint8_t)128;
 
-	m_registers[x] = (x << 1);
+	m_registers[x] = m_registers[x] << 1;
 }
 
 void Computer::SNE_2(const uint16_t* command)
@@ -506,7 +506,7 @@ void Computer::RND(const uint16_t* command)
 	
 	srand(time(0));
 
-	const uint8_t random_byte = (rand() % (255 - 0 + 1) + 0);
+	const uint8_t random_byte = rand() % 256;
 
 	m_registers[x] = (random_byte & kk);
 }
