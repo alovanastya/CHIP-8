@@ -1,4 +1,5 @@
 #include "Computer.h"
+#include <time.h>
 
 Computer::Computer(const std::string& dump_path) : m_program_counter(512)
 {
@@ -52,7 +53,7 @@ void Computer::step()
 
 	case 1:
 		// 1nnn - JP addr
-		JP(command);
+		JP_1(command);
 		break;
 
 	case 2:
@@ -67,7 +68,7 @@ void Computer::step()
 
 	case 4:
 		// 4xkk - SNE Vx, byte
-		SNE(command);
+		SNE_1(command);
 		break;
 
 	case 5:
@@ -114,23 +115,28 @@ void Computer::step()
 		case 4:
 			// TODO
 			// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = произошло переполнение.
+			ADD_2(command);
 			break;
 
 		case 5:
 			// TODO
 			// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = результат не отрицательный
+			SUB(command);
 			break;
 
 		case 6:
+			// 8xy6 - SHR Set Vx = Vx SHR 1.
 			SHR(command);
 			break;
 
 		case 7:
 			// TODO
-			// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = результат не отрицательный
+			// 8xy7 - SUBN Vx, Vy
+			SUBN(command);
 			break;
 
 		case 14:
+			// 8xyE - SHL Set Vx = Vx SHL 1.
 			SHL(command);
 			break;
 
@@ -139,6 +145,26 @@ void Computer::step()
 		}
 	}
 	break;
+
+	case 9:
+		// 9xy0 - SNE Vx, Vy
+		SNE_2(command);
+		break;
+
+	case 10:
+		// Annn - LD I, addr
+		LD_3(command);
+		break;
+
+	case 11:
+		// Bnnn - JP V0, addr Jump to location nnn + V0.
+		JP_2(command);
+		break;
+
+	case 12:
+		// Cxkk - RND Vx, byte
+		RND(command);
+		break;
 
 	default:
 		break;
@@ -161,7 +187,7 @@ void Computer::RET()
 	--m_stack_pointer;
 }
 
-void Computer::JP(const uint16_t* command)
+void Computer::JP_1(const uint16_t* command)
 {
 	// 0x1nnn - JP Jump to location nnn
 	// 1		n		n		n
@@ -210,13 +236,14 @@ void Computer::SE_2(const uint16_t* command)
 	uint8_t y = (*command) & 0x00F0;
 	y = (y >> 4);
 
-	if (m_registers[x] == y)
+	//if (m_registers[x] == y)
+	if (m_registers[x] == m_registers[y])
 	{
 		m_program_counter += 2;
 	}
 }
 
-void Computer::SNE(const uint16_t* command)
+void Computer::SNE_1(const uint16_t* command)
 {
 	// 0x4xkk - SNE Skip next instruction if Vx != kk.
 	// 4		x		k		k
@@ -259,7 +286,8 @@ void Computer::LD_2(const uint16_t* command)
 	uint8_t y = (*command) & 0x00F0;
 	y = (y >> 4);
 
-	m_registers[x] = y;
+	//m_registers[x] = y;
+	m_registers[x] = m_registers[y];
 }
 
 void Computer::ADD_1(const uint16_t* command)
@@ -273,7 +301,8 @@ void Computer::ADD_1(const uint16_t* command)
 
 	const uint8_t kk = (*command) & 0x00FF;
 
-	m_registers[x] = x + kk;
+	//m_registers[x] = x + kk;
+	m_registers[x] = m_registers[x] + kk;
 }
 
 void Computer::OR(const uint16_t* command)
@@ -321,6 +350,81 @@ void Computer::XOR(const uint16_t* command)
 	m_registers[x] = m_registers[x] ^ m_registers[y];
 }
 
+void Computer::ADD_2(const uint16_t* command)
+{
+	// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = произошло переполнение.
+	// 8		x		y		4
+	// 1000		....	....	0100
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	uint8_t y = (*command) & 0x00F0;
+	y = (y >> 4);
+
+	m_registers[x] = m_registers[x] + m_registers[y];
+
+	if (m_registers[x] + m_registers[y] > 255) 
+	{
+		m_registers[14] = 1;
+	}
+
+	else
+	{
+		m_registers[14] = 0;
+	}
+}
+
+void Computer::SUB(const uint16_t* command)
+{
+	// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = результат не отрицательный
+	// 8		x		y		5
+	// 1000		....	....	0101
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	uint8_t y = (*command) & 0x00F0;
+	y = (y >> 4);
+
+	m_registers[x] = (m_registers[x] - m_registers[y]);
+
+	if ((m_registers[x] - m_registers[y]) < 0)
+	{
+		m_registers[14] = 0;
+	}
+
+	else
+	{
+		m_registers[14] = 1;
+	}
+}
+
+void Computer::SUBN(const uint16_t* command)
+{
+	// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = результат не отрицательный
+	// 8		x		y		7
+	// 1000		....	....	0111
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	uint8_t y = (*command) & 0x00F0;
+	y = (y >> 4);
+
+	m_registers[x] = (m_registers[y] - m_registers[x]);
+
+	if ((m_registers[y] - m_registers[x]) < 0)
+	{
+		m_registers[14] = 0;
+	}
+
+	else
+	{
+		m_registers[14] = 1;
+	}
+}
+
 void Computer::SHR(const uint16_t* command)
 {
 	// 0x8xy6 - SHR Set Vx = Vx SHR 1.
@@ -331,6 +435,8 @@ void Computer::SHR(const uint16_t* command)
 	x = (x >> 8);
 
 	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига
+
+	m_registers[14] = (x & 1);
 
 	m_registers[x] = m_registers[x] >> 1;
 }
@@ -344,7 +450,63 @@ void Computer::SHL(const uint16_t* command)
 	uint8_t x = ((*command) & 0x0FFF);
 	x = (x >> 8);
 
-	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига
+	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига 
+
+	m_registers[14] = ((x & 8) >> 3);
 
 	m_registers[x] = (x << 1);
+}
+
+void Computer::SNE_2(const uint16_t* command)
+{
+	// 9xy0 - SNE Vx, Vy Skip next instruction if Vx != Vy.
+	// 9		x		y		0
+	// 1001		....	....	0000
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	uint8_t y = (*command) & 0x00F0;
+	y = (y >> 4);
+
+	if (m_registers[x] != m_registers[y])
+	{
+		m_program_counter += 2;
+	}
+}
+
+void Computer::LD_3(const uint16_t* command)
+{
+	// Annn - LD I, addr Set I = nnn. I это m_index_register
+	// A		n		n		n
+	// 1010		....	....	....
+
+	m_index_register = ((*command) & 0x0FFF);
+}
+
+void Computer::JP_2(const uint16_t* command)
+{
+	// Bnnn - JP V0, addr Jump to location nnn + V0.
+	// B		n		n		n
+	// 1011		....	....	....
+
+	m_program_counter = (((*command) & 0x0FFF) + m_registers[0]);
+}
+
+void Computer::RND(const uint16_t* command)
+{
+	// Cxkk - RND Vx, byte Set Vx = random byte AND kk.
+	// C		x		k		k
+	// 1100		....	....	....
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	const uint8_t kk = (*command) & 0x00FF;
+	
+	srand(time(0));
+
+	const uint8_t random_byte = (rand() % (255 - 0 + 1) + 0);
+
+	m_registers[x] = (random_byte & kk);
 }

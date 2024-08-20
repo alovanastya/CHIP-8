@@ -19,7 +19,7 @@ private:
 
 	void RET();
 
-	void JP(const uint16_t* command);
+	void JP_1(const uint16_t* command);
 
 	void CALL(const uint16_t* command);
 
@@ -27,7 +27,7 @@ private:
 
 	void SE_2(const uint16_t* command);
 
-	void SNE(const uint16_t* command);
+	void SNE_1(const uint16_t* command);
 
 	void LD_1(const uint16_t* command);
 
@@ -44,6 +44,21 @@ private:
 	void SHR(const uint16_t* command);
 
 	void SHL(const uint16_t* command);
+
+	void SNE_2(const uint16_t* command);
+
+	void LD_3(const uint16_t* command);
+
+	void JP_2(const uint16_t* command);
+
+	void RND(const uint16_t* command);
+
+	void ADD_2(const uint16_t* command);
+
+	void SUB(const uint16_t* command);
+
+	void SUBN(const uint16_t* command);
+
 
 	// 9xy0 - SNE Vx, Vy Skip next instruction if Vx != Vy.
 	// Annn - LD I, addr Set I = nnn. I это m_index_register
