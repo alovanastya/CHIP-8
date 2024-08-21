@@ -72,8 +72,17 @@ private:
 	// Dxyn - DRW Vx, Vy, nibble
 	// Display n - byte sprite starting at memory location m_index_register at(Vx, Vy), set VF = collision.
 	
-	//Ex9E - SKP Vx
-	//Skip next instruction if key with the value of Vx is pressed.
+	// Ex9E - SKP Vx
+	// Skip next instruction if key with the value of Vx is pressed.
+
+	// ExA1 - SKNP Vx
+	// Skip next instruction if key with the value of Vx is not pressed.
+
+	// Fx07 - LD Vx, DT
+	// Set Vx = delay timer value.
+
+	// Fx0A - LD Vx, K
+	// Wait for a key press, store the value of the key in Vx.
 
 private:
 	uint16_t m_program_counter;
