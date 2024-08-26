@@ -3,6 +3,13 @@
 #include <cstdint>
 #include <fstream>
 
+// TODO: дописать
+enum class Button
+{
+	ONE,
+	TWO,
+
+};
 
 class Computer
 {
@@ -11,6 +18,18 @@ public:
 	Computer(const std::string& dump_path);
 
 	void step();
+
+	// TODO: возвращать указатель на массив m_screen
+	const uint8_t* getScreen() const;
+
+	// TODO: сообщение из внешнего мира о том, что была нажата клавиша
+	void buttonPressed(Button button);
+
+	// TODO: сообщение из внешнего мира о том, что клавишу отпустили
+	void buttonUnPressed(Button button);
+
+	// TODO: пищим, когда таймер не равен нулю
+	bool needBeep() const;
 
 private:
 	uint8_t firstDigit(const uint16_t* command) const;
@@ -69,47 +88,44 @@ private:
 
 	void LD_5(const uint16_t* command);
 
+	// TODO
 
-	// TODO:
-	// у нас есть экран 64 пикселя в ширину и 32 в высоту. Пиксель может быть черным либо белым (0/1)
-	// Мы работаем с экраном, рисуя на нем спрайты (т.е. накладывая на него битовые маски)
-	// При отрисовке спрайта на экране выполнятся операция XOR
-	// Спрайты хранятся в памяти в виде прямугольных битовых масок. Ширина битовой маски всегда равна 8 битам,
-	// а высота может быть от 1 до 15 (см телеграм)
-	// (0,0) -x (63, 0)
-	// |
-	// y
-	// (0,31)   (63,31)
-	// Dxyn - DRW Vx, Vy, nibble
-	// Display n - byte sprite starting at memory location m_index_register at(Vx, Vy), set VF = collision.
-	
-	// Ex9E - SKP Vx
-	// Skip next instruction if key with the value of Vx is pressed.
+	//Fx15 - LD DT, Vx 
+	//Set delay timer = Vx.
 
-	// ExA1 - SKNP Vx
-	// Skip next instruction if key with the value of Vx is not pressed.
+	//Fx18 - LD ST, Vx
+	//Set sound timer = Vx.
 
-	// Fx07 - LD Vx, DT
-	// Set Vx = delay timer value.
+	//Fx1E - ADD I, Vx
+	//Set I = I + Vx.
 
-	// Fx0A - LD Vx, K
-	// Wait for a key press, store the value of the key in Vx.
+	//Fx29 - LD F, Vx
+	//Set I = location of sprite for digit Vx.
+
+	//Fx33 - LD B, Vx
+	//Store BCD representation of Vx in memory locations I, I + 1, and I + 2.
+
+	//Fx55 - LD[I], Vx
+	//Store registers V0 through Vx in memory starting at location I.
+
+	//Fx65 - LD Vx, [I]
+	//Read registers V0 through Vx from memory starting at location I.
 
 private:
 	uint16_t m_program_counter;
 
-	uint8_t m_registers[16];
-	uint16_t m_index_register;
+	uint8_t m_registers[16] = { 0u };
+	uint16_t m_index_register = 0u;
 
 	uint8_t m_memory[4096];
 
-	uint16_t m_stack[16];
-	uint8_t m_stack_pointer;
+	uint16_t m_stack[16] = { 0u };
+	uint8_t m_stack_pointer = 0u;
 
-	uint8_t m_sound_timer;
-	uint8_t m_delay_timer;
+	uint8_t m_sound_timer = 0u;
+	uint8_t m_delay_timer = 0u;
 
-	uint8_t m_screen[64 * 32];
+	uint8_t m_screen[64 * 32] = { 0u };
 
-	bool m_keyboard[16];
+	bool m_keyboard[16] = { false };
 };

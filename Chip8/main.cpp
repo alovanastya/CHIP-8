@@ -2,12 +2,12 @@
 
 int main()
 {
-	//Computer computer(dump_path);
-	/*
+	// TODO: ввод пути с клавиатуры в консоли
+	// Computer computer(dump_path);
+
 	while(true)
 	{
-		computer.step();
 	}
-	*/
+
 	return 0;
 }
