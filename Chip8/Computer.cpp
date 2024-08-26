@@ -166,6 +166,55 @@ void Computer::step()
 		RND(command);
 		break;
 
+	case 13:
+		// Dxyn - DRW Vx, Vy, nibble
+		DRW(command);
+		break;
+
+	case 14:
+	{
+		const uint8_t z = (*command) & 0x000F;
+
+		switch (z)
+		{
+		case 1:
+			// ExA1 - SKNP Vx
+			SKNP(command);
+			break;
+
+		case 14:
+			// Ex9E - SKP Vx
+			SKP(command);
+			break;
+
+		default:
+			break;
+		}
+	}
+		break;
+
+	case 15:
+	{
+		const uint8_t z = (*command) & 0x000F;
+
+		switch (z)
+		{
+		case 7:
+			// Fx07 - LD Vx, DT
+			LD_4(command);
+			break;
+
+		case 10:
+			// Fx0A - LD Vx, K
+			LD_5(command);
+			break;
+
+		default:
+			break;
+		}
+	}
+	break;
+
 	default:
 		break;
 	}
@@ -509,4 +558,116 @@ void Computer::RND(const uint16_t* command)
 	const uint8_t random_byte = rand() % 256;
 
 	m_registers[x] = (random_byte & kk);
+}
+
+void Computer::DRW(const uint16_t* command)
+{
+	// Dxyn - DRW Vx, Vy, nibble
+	// Display n - byte sprite starting at memory location m_index_register at(Vx, Vy), set VF = collision.
+	// D		x		y		n
+	// 1101		....	....	.....
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	uint8_t y = (*command) & 0x00F0;
+	y = (y >> 4);
+
+	const uint8_t n = (*command) & 0x000F;
+
+	const uint16_t left_corner = (64 * x + y);
+
+	uint16_t current = left_corner;
+
+	for (int h = 0; h < n; h++)
+	{
+		int i = 7;
+
+		uint8_t mask = m_registers[m_index_register + h];
+
+		for (int l = 0; l < 8; l++)
+		{
+
+			if (m_screen[current + l] == 1 && ((mask >> i) & (uint8_t)1) == 1)
+			{
+				m_registers[15] = 1;
+			}
+
+			m_screen[current + l] = (m_screen[current + l] ^ ((mask >> i) & (uint8_t)1));
+			i--;
+		}
+		current += 64;
+	}
+}
+
+void Computer::SKP(const uint16_t* command)
+{
+	// Ex9E - SKP Vx
+	// Skip next instruction if key with the value of Vx is pressed.
+	// E		x		9		E
+	// 1110		....	1001	1110
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	if (m_keyboard[m_registers[x]] == 1)
+	{
+		m_program_counter += 2;
+	}
+}
+
+void Computer::SKNP(const uint16_t* command)
+{
+	// ExA1 - SKNP Vx
+	// Skip next instruction if key with the value of Vx is not pressed.
+	// E		x		A		1
+	// 1110		....	1010	0001
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	if (m_keyboard[m_registers[x]] == 0)
+	{
+		m_program_counter += 2;
+	}
+}
+
+void Computer::LD_4(const uint16_t* command)
+{
+	// Fx07 - LD Vx, DT
+	// Set Vx = delay timer value.
+	// F		x		0		7
+	// 1111		....	0000	0111
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	m_registers[x] = m_delay_timer;
+}
+
+void Computer::LD_5(const uint16_t* command)
+{
+	// Fx0A - LD Vx, K
+	// Wait for a key press, store the value of the key in Vx.
+	// F		x		0		A
+	// 1111		....	0000	1010
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	bool is_pressed = false;
+
+	for (int i = 0; i < 16; i++)
+	{
+		if (m_keyboard[i] == 1)
+		{
+			is_pressed = true;
+			m_registers[x] = i;
+		}
+	}
+
+	if (!is_pressed)
+	{
+		m_program_counter -= 2;
+	}
 }

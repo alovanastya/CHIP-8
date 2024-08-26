@@ -59,6 +59,17 @@ private:
 
 	void SUBN(const uint16_t* command);
 
+	void DRW(const uint16_t* command);
+
+	void SKP(const uint16_t* command);
+
+	void SKNP(const uint16_t* command);
+
+	void LD_4(const uint16_t* command);
+
+	void LD_5(const uint16_t* command);
+
+
 	// TODO:
 	// у нас есть экран 64 пикселя в ширину и 32 в высоту. Пиксель может быть черным либо белым (0/1)
 	// Мы работаем с экраном, рисуя на нем спрайты (т.е. накладывая на него битовые маски)
