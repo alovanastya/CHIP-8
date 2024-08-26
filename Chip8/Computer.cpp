@@ -575,27 +575,27 @@ void Computer::DRW(const uint16_t* command)
 
 	const uint8_t n = (*command) & 0x000F;
 
-	const uint16_t left_corner = (64 * x + y);
+	const uint16_t left_corner = (64 * y + x);
 
 	uint16_t current = left_corner;
 
 	for (int h = 0; h < n; h++)
 	{
 		int i = 7;
-
-		uint8_t mask = m_registers[m_index_register + h];
+		const uint8_t mask = m_registers[m_index_register + h];
 
 		for (int l = 0; l < 8; l++)
 		{
-
-			if (m_screen[current + l] == 1 && ((mask >> i) & (uint8_t)1) == 1)
+			const uint8_t mask_value = ((mask >> i) & (uint8_t)1);
+			if (m_screen[current + l] == 1 && mask_value == 1)
 			{
 				m_registers[15] = 1;
 			}
 
-			m_screen[current + l] = (m_screen[current + l] ^ ((mask >> i) & (uint8_t)1));
+			m_screen[current + l] = (m_screen[current + l] ^ mask_value);
 			i--;
 		}
+
 		current += 64;
 	}
 }
@@ -610,7 +610,7 @@ void Computer::SKP(const uint16_t* command)
 	uint8_t x = ((*command) & 0x0FFF);
 	x = (x >> 8);
 
-	if (m_keyboard[m_registers[x]] == 1)
+	if (m_keyboard[m_registers[x]])
 	{
 		m_program_counter += 2;
 	}
@@ -626,7 +626,7 @@ void Computer::SKNP(const uint16_t* command)
 	uint8_t x = ((*command) & 0x0FFF);
 	x = (x >> 8);
 
-	if (m_keyboard[m_registers[x]] == 0)
+	if (!m_keyboard[m_registers[x]])
 	{
 		m_program_counter += 2;
 	}

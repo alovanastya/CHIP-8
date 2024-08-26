@@ -109,7 +109,7 @@ private:
 	uint8_t m_sound_timer;
 	uint8_t m_delay_timer;
 
-	uint8_t m_screen[62 * 32];
+	uint8_t m_screen[64 * 32];
 
 	bool m_keyboard[16];
 };
