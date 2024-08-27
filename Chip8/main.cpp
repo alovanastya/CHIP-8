@@ -1,13 +1,11 @@
 #include <iostream>
-#include <chrono>
-#include <thread>
 #include "Computer.h"
 #include "SFML/Window.hpp"
 #include "SFML/Graphics.hpp"
 
 static const int WINDOW_WIDTH = 640;				// window width (pixels)
 static const int WINDOW_HEIGHT = 320;				// window height (pixels)
-static const int FREQUENCY = 60;
+static const int FREQUENCY = 500;
 
 void processKeys(Computer& computer, sf::RenderWindow& window)
 {
@@ -147,13 +145,6 @@ void drawScreen(Computer& computer, sf::RenderWindow& window)
 				pixel.setPosition({ x * 10.0f, y * 10.0f });
 				window.draw(pixel);
 			}
-			else
-			{
-				sf::RectangleShape pixel({ 10, 10 });
-				pixel.setFillColor(sf::Color::Black);
-				pixel.setPosition({ x * 10.0f, y * 10.0f });
-				window.draw(pixel);
-			}
 		}
 	}
 
@@ -167,16 +158,12 @@ int main()
 	std::cin >> dump_path;
 
 	sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "CHIP-8");
-	window.setVerticalSyncEnabled(true);
+	window.setFramerateLimit(FREQUENCY);
 
 	Computer computer(dump_path);
 
-	const int sleep_time = int((float)1000 / (float)FREQUENCY);
-
 	while (window.isOpen())
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-
 		processKeys(computer, window);
 
 		computer.step();
