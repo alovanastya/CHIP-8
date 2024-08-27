@@ -1,5 +1,4 @@
 #include "Computer.h"
-#include <time.h>
 
 Computer::Computer(const std::string& dump_path) : m_program_counter(512)
 {
@@ -28,76 +27,62 @@ Computer::Computer(const std::string& dump_path) : m_program_counter(512)
 		m_memory[80 + i] = fonts[i];
 	}
 
-	std::ifstream file(dump_path, std::ios::binary);
+	std::ifstream file(dump_path, std::ios::binary | std::ios::ate);
 
 	if (file.is_open())
 	{
-		int i = 512;
-
-		while (!file.eof())
-		{
-			file >> m_memory[i];
-			i++;
-
-			if (i >= 4096)
-			{
-				break;
-			}
-		}
-
+		const int size = file.tellg();
+		file.seekg(0, std::ios::beg);
+		file.read((char*)m_memory + 512u, size);
 		file.close();
 	}
 }
 
-// TODO: возвращать указатель на массив m_screen
 const uint8_t* Computer::getScreen() const
 {
 	return m_screen;
 }
 
-// TODO: сообщение из внешнего мира о том, что была нажата клавиша
 void Computer::buttonPressed(Button button)
 {
 	m_keyboard[(int)button] = 1;
 }
 
-// TODO: сообщение из внешнего мира о том, что клавишу отпустили
-void  Computer::buttonUnPressed(Button button)
+void Computer::buttonReleased(Button button)
 {
 	m_keyboard[(int)button] = 0;
 }
 
-// TODO: пищим, когда таймер не равен нулю
-bool  Computer::needBeep() const
+bool Computer::needBeep() const
 {
-	if (m_sound_timer)
-	{
-		return true;
-	}
-	return false;
+	return m_sound_timer;
 }
 
-uint8_t Computer::firstDigit(const uint16_t* command) const
+uint16_t Computer::firstDigit(uint16_t command) const
 {
-	return ((*command) >> 12);
+	return (command >> 12);
 }
 
 void Computer::step()
 {
-	const uint16_t* command = reinterpret_cast<uint16_t*>(&m_memory[m_program_counter]);
+	const uint16_t first_byte = m_memory[m_program_counter];
+	const uint16_t second_byte = m_memory[m_program_counter + 1];
+
+	uint16_t command = first_byte << 8;
+	command += second_byte;
 
 	m_program_counter += 2;
 
 	switch (firstDigit(command))
 	{
 	case 0:
-		if ((*command) == 0x00E0)
+		if (command == 0x00E0)
 		{
 			// 00E0 - CLS
 			CLS();
 		}
 
-		else if ((*command) == 0x00EE)
+		else if (command == 0x00EE)
 		{
 			// 00EE - RET
 			RET();
@@ -141,7 +126,7 @@ void Computer::step()
 
 	case 8:
 	{
-		const uint8_t z = (*command) & 0x000F;
+		const uint16_t z = command & 0x000F;
 
 		switch (z)
 		{
@@ -166,12 +151,12 @@ void Computer::step()
 			break;
 
 		case 4:
-			// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = произошло переполнение.
+			// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = carry
 			ADD_2(command);
 			break;
 
 		case 5:
-			// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = результат не отрицательный
+			// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = borrow
 			SUB(command);
 			break;
 
@@ -223,7 +208,7 @@ void Computer::step()
 
 	case 14:
 	{
-		const uint8_t z = (*command) & 0x000F;
+		const uint16_t z = command & 0x000F;
 
 		switch (z)
 		{
@@ -241,14 +226,12 @@ void Computer::step()
 			break;
 		}
 	}
-		break;
+	break;
 
 	case 15:
 	{
-		// TODO: нужна более сложная проверка
-		const uint8_t fourth_digit = (*command) & 0x000F;
-
-		const uint8_t third_digit = (((*command) & 0x00F0) >> 4);
+		const uint16_t fourth_digit = command & 0x000F;
+		const uint16_t third_digit = ((command & 0x00F0) >> 4);
 
 		if (third_digit == 0 && fourth_digit == 7)
 		{
@@ -336,16 +319,16 @@ void Computer::RET()
 	--m_stack_pointer;
 }
 
-void Computer::JP_1(const uint16_t* command)
+void Computer::JP_1(uint16_t command)
 {
 	// 0x1nnn - JP Jump to location nnn
 	// 1		n		n		n
 	// 0001		....	....	....
 
-	m_program_counter = (*command) & 0x0FFF;
+	m_program_counter = command & 0x0FFF;
 }
 
-void Computer::CALL(const uint16_t* command)
+void Computer::CALL(uint16_t command)
 {
 	// 0x2nnn - CALL Call subroutine at nnn.
 	// 2		n		n		n
@@ -353,19 +336,19 @@ void Computer::CALL(const uint16_t* command)
 
 	m_stack[m_stack_pointer] = m_program_counter;
 	m_stack_pointer++;
-	m_program_counter = (*command) & 0x00FF;
+	m_program_counter = command & 0x0FFF;
 }
 
-void Computer::SE_1(const uint16_t* command)
+void Computer::SE_1(uint16_t command)
 {
 	// 0x3xkk - SE Skip next instruction if Vx = kk
 	// 3		x		k		k
 	// 0011		....	....	....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t kk = (*command) & 0x00FF;
+	const uint16_t kk = command & 0x00FF;
 
 	if (m_registers[x] == kk)
 	{
@@ -373,16 +356,16 @@ void Computer::SE_1(const uint16_t* command)
 	}
 }
 
-void Computer::SE_2(const uint16_t* command)
+void Computer::SE_2(uint16_t command)
 {
 	// 0x5xy0 - SE Skip next instruction if Vx = Vy.
 	// 5		x		y		0
 	// 0101		....	....	0000
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	//if (m_registers[x] == y)
@@ -392,16 +375,16 @@ void Computer::SE_2(const uint16_t* command)
 	}
 }
 
-void Computer::SNE_1(const uint16_t* command)
+void Computer::SNE_1(uint16_t command)
 {
 	// 0x4xkk - SNE Skip next instruction if Vx != kk.
 	// 4		x		k		k
 	// 0100		....	....	....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t kk = (*command) & 0x00FF;
+	const uint16_t kk = command & 0x00FF;
 
 	if (m_registers[x] != kk)
 	{
@@ -409,111 +392,111 @@ void Computer::SNE_1(const uint16_t* command)
 	}
 }
 
-void Computer::LD_1(const uint16_t* command)
+void Computer::LD_1(uint16_t command)
 {
 	// 0x6xkk - LD Set Vx = kk.
 	// 6		x		k		k
 	// 0110		....	....	....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t kk = (*command) & 0x00FF;
+	const uint16_t kk = command & 0x00FF;
 
 	m_registers[x] = kk;
 }
 
-void Computer::LD_2(const uint16_t* command)
+void Computer::LD_2(uint16_t command)
 {
 	// 0x8xy0 - LD Set Vx = Vy.
 	// 8		x		y		0
 	// 1000		....	....	0000
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	//m_registers[x] = y;
 	m_registers[x] = m_registers[y];
 }
 
-void Computer::ADD_1(const uint16_t* command)
+void Computer::ADD_1(uint16_t command)
 {
 	// 0x7xkk - ADD Set Vx = Vx + kk.
 	// 7		x		k		k
 	// 0111		....	....	....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t kk = (*command) & 0x00FF;
+	const uint16_t kk = command & 0x00FF;
 
 	//m_registers[x] = x + kk;
 	m_registers[x] = m_registers[x] + kk;
 }
 
-void Computer::OR(const uint16_t* command)
+void Computer::OR(uint16_t command)
 {
 	// 0x8xy1 - OR Set Vx = Vx OR Vy.
 	// 8		x		y		1
 	// 1000		....	....	0001
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = m_registers[x] | m_registers[y];
 }
 
-void Computer::AND(const uint16_t* command)
+void Computer::AND(uint16_t command)
 {
 	// 0x8xy2 - AND Set Vx = Vx AND Vy.
 	// 8		x		y		2
 	// 1000		....	....	0010
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = m_registers[x] & m_registers[y];
 }
 
-void Computer::XOR(const uint16_t* command)
+void Computer::XOR(uint16_t command)
 {
 	// 0x8xy3 - XOR Set Vx = Vx XOR Vy.
 	// 8		x		y		3
 	// 1000		....	....	0011
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = m_registers[x] ^ m_registers[y];
 }
 
-void Computer::ADD_2(const uint16_t* command)
+void Computer::ADD_2(uint16_t command)
 {
-	// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = произошло переполнение.
+	// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
 	// 8		x		y		4
 	// 1000		....	....	0100
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = m_registers[x] + m_registers[y];
 
-	if (m_registers[x] + m_registers[y] > 255) 
+	if (m_registers[x] + m_registers[y] > 255)
 	{
 		m_registers[15] = 1;
 	}
@@ -524,16 +507,16 @@ void Computer::ADD_2(const uint16_t* command)
 	}
 }
 
-void Computer::SUB(const uint16_t* command)
+void Computer::SUB(uint16_t command)
 {
-	// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = результат не отрицательный
+	// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = carry
 	// 8		x		y		5
 	// 1000		....	....	0101
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = (m_registers[x] - m_registers[y]);
@@ -549,16 +532,16 @@ void Computer::SUB(const uint16_t* command)
 	}
 }
 
-void Computer::SUBN(const uint16_t* command)
+void Computer::SUBN(uint16_t command)
 {
-	// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = результат не отрицательный
+	// 8xy7 - SUBN Vx, Vy		Set Vx = Vy - Vx, set VF = borrow
 	// 8		x		y		7
 	// 1000		....	....	0111
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	m_registers[x] = (m_registers[y] - m_registers[x]);
@@ -574,44 +557,44 @@ void Computer::SUBN(const uint16_t* command)
 	}
 }
 
-void Computer::SHR(const uint16_t* command)
+void Computer::SHR(uint16_t command)
 {
 	// 0x8xy6 - SHR Set Vx = Vx SHR 1.
 	// 8		x		y		6
 	// 1000		....	....	0110
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	m_registers[15] = m_registers[x] & (uint8_t)1;
+	m_registers[15] = m_registers[x] & (uint16_t)1;
 
 	m_registers[x] = m_registers[x] >> 1;
 }
 
-void Computer::SHL(const uint16_t* command)
+void Computer::SHL(uint16_t command)
 {
 	// 0x8xyE - SHL Set Vx = Vx SHL 1.
 	// 8		x		y		E
 	// 1000		....	....	1110
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	m_registers[15] = m_registers[x] & (uint8_t)128;
+	m_registers[15] = m_registers[x] & (uint16_t)128;
 
 	m_registers[x] = m_registers[x] << 1;
 }
 
-void Computer::SNE_2(const uint16_t* command)
+void Computer::SNE_2(uint16_t command)
 {
 	// 9xy0 - SNE Vx, Vy Skip next instruction if Vx != Vy.
 	// 9		x		y		0
 	// 1001		....	....	0000
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
 
 	if (m_registers[x] != m_registers[y])
@@ -620,56 +603,62 @@ void Computer::SNE_2(const uint16_t* command)
 	}
 }
 
-void Computer::LD_3(const uint16_t* command)
+void Computer::LD_3(uint16_t command)
 {
-	// Annn - LD I, addr Set I = nnn. I это m_index_register
+	// Annn - LD I, addr Set I = nnn. I пїЅпїЅпїЅ m_index_register
 	// A		n		n		n
 	// 1010		....	....	....
 
-	m_index_register = ((*command) & 0x0FFF);
+	m_index_register = (command & 0x0FFF);
 }
 
-void Computer::JP_2(const uint16_t* command)
+void Computer::JP_2(uint16_t command)
 {
 	// Bnnn - JP V0, addr Jump to location nnn + V0.
 	// B		n		n		n
 	// 1011		....	....	....
 
-	m_program_counter = (((*command) & 0x0FFF) + m_registers[0]);
+	m_program_counter = ((command & 0x0FFF) + m_registers[0]);
 }
 
-void Computer::RND(const uint16_t* command)
+void Computer::RND(uint16_t command)
 {
 	// Cxkk - RND Vx, byte Set Vx = random byte AND kk.
 	// C		x		k		k
 	// 1100		....	....	....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t kk = (*command) & 0x00FF;
-	
+	const uint16_t kk = command & 0x00FF;
+
 	srand(time(0));
 
-	const uint8_t random_byte = rand() % 256;
+	const uint16_t random_byte = rand() % 256;
 
 	m_registers[x] = (random_byte & kk);
 }
 
-void Computer::DRW(const uint16_t* command)
+void Computer::DRW(uint16_t command)
 {
 	// Dxyn - DRW Vx, Vy, nibble
 	// Display n - byte sprite starting at memory location m_index_register at(Vx, Vy), set VF = collision.
 	// D		x		y		n
 	// 1101		....	....	.....
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
+	x = m_registers[x];
+	x = x % 64;
 
-	uint8_t y = (*command) & 0x00F0;
+	uint16_t y = command & 0x00F0;
 	y = (y >> 4);
+	y = m_registers[y];
+	y = y % 32;
 
-	const uint8_t n = (*command) & 0x000F;
+	m_registers[15] = 0;
+
+	const uint16_t n = command & 0x000F;
 
 	const uint16_t left_corner = (64 * y + x);
 
@@ -678,11 +667,11 @@ void Computer::DRW(const uint16_t* command)
 	for (int h = 0; h < n; h++)
 	{
 		int i = 7;
-		const uint8_t mask = m_registers[m_index_register + h];
+		const uint16_t mask = m_memory[m_index_register + h];
 
 		for (int l = 0; l < 8; l++)
 		{
-			const uint8_t mask_value = ((mask >> i) & (uint8_t)1);
+			const uint16_t mask_value = ((mask >> i) & (uint16_t)1);
 			if (m_screen[current + l] == 1 && mask_value == 1)
 			{
 				m_registers[15] = 1;
@@ -696,14 +685,14 @@ void Computer::DRW(const uint16_t* command)
 	}
 }
 
-void Computer::SKP(const uint16_t* command)
+void Computer::SKP(uint16_t command)
 {
 	// Ex9E - SKP Vx
 	// Skip next instruction if key with the value of Vx is pressed.
 	// E		x		9		E
 	// 1110		....	1001	1110
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	if (m_keyboard[m_registers[x]])
@@ -712,14 +701,14 @@ void Computer::SKP(const uint16_t* command)
 	}
 }
 
-void Computer::SKNP(const uint16_t* command)
+void Computer::SKNP(uint16_t command)
 {
 	// ExA1 - SKNP Vx
 	// Skip next instruction if key with the value of Vx is not pressed.
 	// E		x		A		1
 	// 1110		....	1010	0001
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	if (!m_keyboard[m_registers[x]])
@@ -728,27 +717,27 @@ void Computer::SKNP(const uint16_t* command)
 	}
 }
 
-void Computer::LD_4(const uint16_t* command)
+void Computer::LD_4(uint16_t command)
 {
 	// Fx07 - LD Vx, DT
 	// Set Vx = delay timer value.
 	// F		x		0		7
 	// 1111		....	0000	0111
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	m_registers[x] = m_delay_timer;
 }
 
-void Computer::LD_5(const uint16_t* command)
+void Computer::LD_5(uint16_t command)
 {
 	// Fx0A - LD Vx, K
 	// Wait for a key press, store the value of the key in Vx.
 	// F		x		0		A
 	// 1111		....	0000	1010
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	bool is_pressed = false;
@@ -768,153 +757,83 @@ void Computer::LD_5(const uint16_t* command)
 	}
 }
 
-void Computer::LD_6(const uint16_t* command)
+void Computer::LD_6(uint16_t command)
 {
 	//Fx15 - LD DT, Vx 
 	//Set delay timer = Vx.
 	// F		x		1		5
 	// 1111		....	0001	0101
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	m_delay_timer = m_registers[x];
 }
 
-void Computer::LD_7(const uint16_t* command)
+void Computer::LD_7(uint16_t command)
 {
 	//Fx18 - LD ST, Vx
 	//Set sound timer = Vx.
 	// F		x		1		8
 	// 1111		....	0001	1000
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	m_sound_timer = m_registers[x];
 }
 
-void Computer::ADD_3(const uint16_t* command)
+void Computer::ADD_3(uint16_t command)
 {
 	//Fx1E - ADD I, Vx
 	//Set I = I + Vx.
 	// F		x		1		E
 	// 1111		....	0001	1110
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	m_index_register = (m_index_register + m_registers[x]);
 }
 
-void Computer::LD_8(const uint16_t* command)
+void Computer::LD_8(uint16_t command)
 {
 	//Fx29 - LD F, Vx
 	//Set I = location of sprite for digit Vx.
 	// F		x		2		9
 	// 1111		....	0010	1001
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t number = m_registers[x];
-	
-	switch (number)
-	{
-	case 0:
-		m_index_register = 80;
-		break;
-
-	case 1:
-		m_index_register = 85;
-		break;
-
-	case 2:
-		m_index_register = 90;
-		break;
-
-	case 3:
-		m_index_register = 95;
-		break;
-
-	case 4:
-		m_index_register = 100;
-		break;
-
-	case 5:
-		m_index_register = 105;
-		break;
-
-	case 6:
-		m_index_register = 110;
-		break;
-
-	case 7:
-		m_index_register = 115;
-		break;
-
-	case 8:
-		m_index_register = 120;
-		break;
-
-	case 9:
-		m_index_register = 125;
-		break;
-
-	case 10:
-		m_index_register = 130;
-		break;
-
-	case 11:
-		m_index_register = 135;
-		break;
-
-	case 12:
-		m_index_register = 140;
-		break;
-
-	case 13:
-		m_index_register = 145;
-		break;
-
-	case 14:
-		m_index_register = 150;
-		break;
-
-	case 15:
-		m_index_register = 155;
-		break;
-
-	default:
-		break;
-	}
+	m_index_register = 80 + m_registers[x] * 5;
 }
 
-void Computer::LD_9(const uint16_t* command)
+void Computer::LD_9(uint16_t command)
 {
 	//Fx33 - LD B, Vx
 	//Store BCD representation of Vx in memory locations I, I + 1, and I + 2.
 	// F		x		3		3
 	// 1111		....	0011	0011
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
-	const uint8_t number = m_registers[x];
+	const uint16_t number = m_registers[x];
 
 	m_memory[m_index_register] = (number / 100);
 	m_memory[m_index_register + 1] = ((number % 100) / 10);
 	m_memory[m_index_register + 2] = (number % 10);
 }
 
-void Computer::LD_10(const uint16_t* command)
+void Computer::LD_10(uint16_t command)
 {
 	//Fx55 - LD[I], Vx
 	//Store registers V0 through Vx in memory starting at location I.
 	// F		x		5		5
 	// 1111		....	0101	0101
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	for (int i = 0; i <= x; i++)
@@ -923,14 +842,14 @@ void Computer::LD_10(const uint16_t* command)
 	}
 }
 
-void Computer::LD_11(const uint16_t* command)
+void Computer::LD_11(uint16_t command)
 {
 	//Fx65 - LD Vx, [I]
 	//Read registers V0 through Vx from memory starting at location I.
 	// F		x		6		5
 	// 1111		....	0110	0101
 
-	uint8_t x = ((*command) & 0x0FFF);
+	uint16_t x = (command & 0x0FFF);
 	x = (x >> 8);
 
 	for (int i = 0; i <= x; i++)
