@@ -6,9 +6,22 @@
 // TODO: дописать
 enum class Button
 {
+	ZERO,
 	ONE,
 	TWO,
-
+	THREE,
+	FOUR,
+	FIVE,
+	SIX,
+	SEVEN,
+	EIGHT,
+	NINE,
+	A,
+	B,
+	C,
+	D,
+	E,
+	F
 };
 
 class Computer
@@ -87,6 +100,20 @@ private:
 	void LD_4(const uint16_t* command);
 
 	void LD_5(const uint16_t* command);
+
+	void LD_6(const uint16_t* command);
+
+	void LD_7(const uint16_t* command);
+
+	void ADD_3(const uint16_t* command);
+
+	void LD_8(const uint16_t* command);
+
+	void LD_9(const uint16_t* command);
+
+	void LD_10(const uint16_t* command);
+
+	void LD_11(const uint16_t* command);
 
 	// TODO
 

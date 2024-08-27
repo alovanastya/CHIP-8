@@ -49,6 +49,34 @@ Computer::Computer(const std::string& dump_path) : m_program_counter(512)
 	}
 }
 
+// TODO: возвращать указатель на массив m_screen
+const uint8_t* Computer::getScreen() const
+{
+	return m_screen;
+}
+
+// TODO: сообщение из внешнего мира о том, что была нажата клавиша
+void Computer::buttonPressed(Button button)
+{
+	m_keyboard[(int)button] = 1;
+}
+
+// TODO: сообщение из внешнего мира о том, что клавишу отпустили
+void  Computer::buttonUnPressed(Button button)
+{
+	m_keyboard[(int)button] = 0;
+}
+
+// TODO: пищим, когда таймер не равен нулю
+bool  Computer::needBeep() const
+{
+	if (m_sound_timer)
+	{
+		return true;
+	}
+	return false;
+}
+
 uint8_t Computer::firstDigit(const uint16_t* command) const
 {
 	return ((*command) >> 12);
@@ -138,13 +166,11 @@ void Computer::step()
 			break;
 
 		case 4:
-			// TODO
 			// 8xy4 - ADD Vx, Vy		Set Vx = Vx + Vy, set VF = произошло переполнение.
 			ADD_2(command);
 			break;
 
 		case 5:
-			// TODO
 			// 8xy5 - SUB Vx, Vy		Set Vx = Vx - Vy, set VF = результат не отрицательный
 			SUB(command);
 			break;
@@ -155,7 +181,6 @@ void Computer::step()
 			break;
 
 		case 7:
-			// TODO
 			// 8xy7 - SUBN Vx, Vy
 			SUBN(command);
 			break;
@@ -221,22 +246,62 @@ void Computer::step()
 	case 15:
 	{
 		// TODO: нужна более сложная проверка
-		const uint8_t z = (*command) & 0x000F;
+		const uint8_t fourth_digit = (*command) & 0x000F;
 
-		switch (z)
+		const uint8_t third_digit = (((*command) & 0x00F0) >> 4);
+
+		if (third_digit == 0 && fourth_digit == 7)
 		{
-		case 7:
 			// Fx07 - LD Vx, DT
 			LD_4(command);
-			break;
+		}
 
-		case 10:
+		else if (third_digit == 0 && fourth_digit == 10)
+		{
 			// Fx0A - LD Vx, K
 			LD_5(command);
-			break;
+		}
 
-		default:
-			break;
+		else if (third_digit == 1 && fourth_digit == 5)
+		{
+			//Fx15 - LD DT, Vx 
+			LD_6(command);
+		}
+
+		else if (third_digit == 1 && fourth_digit == 8)
+		{
+			//Fx18 - LD ST, Vx
+			LD_7(command);
+		}
+
+		else if (third_digit == 1 && fourth_digit == 14)
+		{
+			//Fx1E - ADD I, Vx
+			ADD_3(command);
+		}
+
+		else if (third_digit == 2 && fourth_digit == 9)
+		{
+			//Fx29 - LD F, Vx
+			LD_8(command);
+		}
+
+		else if (third_digit == 3 && fourth_digit == 3)
+		{
+			//Fx33 - LD B, Vx
+			LD_9(command);
+		}
+
+		else if (third_digit == 5 && fourth_digit == 5)
+		{
+			//Fx55 - LD[I], Vx
+			LD_10(command);
+		}
+
+		else if (third_digit == 6 && fourth_digit == 5)
+		{
+			//Fx65 - LD Vx, [I]
+			LD_11(command);
 		}
 	}
 	break;
@@ -518,8 +583,6 @@ void Computer::SHR(const uint16_t* command)
 	uint8_t x = ((*command) & 0x0FFF);
 	x = (x >> 8);
 
-	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига
-
 	m_registers[15] = m_registers[x] & (uint8_t)1;
 
 	m_registers[x] = m_registers[x] >> 1;
@@ -533,8 +596,6 @@ void Computer::SHL(const uint16_t* command)
 
 	uint8_t x = ((*command) & 0x0FFF);
 	x = (x >> 8);
-
-	// TODO: обновить VF - записать туда число, которое "выпадет" после сдвига 
 
 	m_registers[15] = m_registers[x] & (uint8_t)128;
 
@@ -704,5 +765,176 @@ void Computer::LD_5(const uint16_t* command)
 	if (!is_pressed)
 	{
 		m_program_counter -= 2;
+	}
+}
+
+void Computer::LD_6(const uint16_t* command)
+{
+	//Fx15 - LD DT, Vx 
+	//Set delay timer = Vx.
+	// F		x		1		5
+	// 1111		....	0001	0101
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	m_delay_timer = m_registers[x];
+}
+
+void Computer::LD_7(const uint16_t* command)
+{
+	//Fx18 - LD ST, Vx
+	//Set sound timer = Vx.
+	// F		x		1		8
+	// 1111		....	0001	1000
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	m_sound_timer = m_registers[x];
+}
+
+void Computer::ADD_3(const uint16_t* command)
+{
+	//Fx1E - ADD I, Vx
+	//Set I = I + Vx.
+	// F		x		1		E
+	// 1111		....	0001	1110
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	m_index_register = (m_index_register + m_registers[x]);
+}
+
+void Computer::LD_8(const uint16_t* command)
+{
+	//Fx29 - LD F, Vx
+	//Set I = location of sprite for digit Vx.
+	// F		x		2		9
+	// 1111		....	0010	1001
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	const uint8_t number = m_registers[x];
+	
+	switch (number)
+	{
+	case 0:
+		m_index_register = 80;
+		break;
+
+	case 1:
+		m_index_register = 85;
+		break;
+
+	case 2:
+		m_index_register = 90;
+		break;
+
+	case 3:
+		m_index_register = 95;
+		break;
+
+	case 4:
+		m_index_register = 100;
+		break;
+
+	case 5:
+		m_index_register = 105;
+		break;
+
+	case 6:
+		m_index_register = 110;
+		break;
+
+	case 7:
+		m_index_register = 115;
+		break;
+
+	case 8:
+		m_index_register = 120;
+		break;
+
+	case 9:
+		m_index_register = 125;
+		break;
+
+	case 10:
+		m_index_register = 130;
+		break;
+
+	case 11:
+		m_index_register = 135;
+		break;
+
+	case 12:
+		m_index_register = 140;
+		break;
+
+	case 13:
+		m_index_register = 145;
+		break;
+
+	case 14:
+		m_index_register = 150;
+		break;
+
+	case 15:
+		m_index_register = 155;
+		break;
+
+	default:
+		break;
+	}
+}
+
+void Computer::LD_9(const uint16_t* command)
+{
+	//Fx33 - LD B, Vx
+	//Store BCD representation of Vx in memory locations I, I + 1, and I + 2.
+	// F		x		3		3
+	// 1111		....	0011	0011
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	const uint8_t number = m_registers[x];
+
+	m_memory[m_index_register] = (number / 100);
+	m_memory[m_index_register + 1] = ((number % 100) / 10);
+	m_memory[m_index_register + 2] = (number % 10);
+}
+
+void Computer::LD_10(const uint16_t* command)
+{
+	//Fx55 - LD[I], Vx
+	//Store registers V0 through Vx in memory starting at location I.
+	// F		x		5		5
+	// 1111		....	0101	0101
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	for (int i = 0; i <= x; i++)
+	{
+		m_memory[m_index_register + i] = m_registers[i];
+	}
+}
+
+void Computer::LD_11(const uint16_t* command)
+{
+	//Fx65 - LD Vx, [I]
+	//Read registers V0 through Vx from memory starting at location I.
+	// F		x		6		5
+	// 1111		....	0110	0101
+
+	uint8_t x = ((*command) & 0x0FFF);
+	x = (x >> 8);
+
+	for (int i = 0; i <= x; i++)
+	{
+		m_registers[i] = m_memory[m_index_register + i];
 	}
 }
